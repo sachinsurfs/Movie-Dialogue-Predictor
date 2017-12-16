@@ -6,7 +6,7 @@ from nltk.corpus import wordnet as wn
 from datetime import time
 
 subFile = open('__featureSet.csv', 'rb')
-featureFile = open('featureSet.csv', 'wb')
+featureFile = open('featureSetCont.csv', 'wb')
 
 _features = csv.reader(subFile, delimiter=',',quotechar='"') #Assuming this isn't very long
 
@@ -49,54 +49,56 @@ class EorQ(FeatureParser):
 	
 	def vectorize(self, x_list): 
 		chars = set('!?')
+		count=0
 		if any((c in chars) for c in x_list[3]):			
-			return 1
-		return 0
+			count+=1
+		return count
 
 class Pivot_words(FeatureParser):
 	
 	def vectorize(self, x_list): 
 		pivot_words = ['but', 'however','inspite', 'although']
-		if any((c in pivot_words) for c in x_list[3]):			
-			return 1
-		return 0
+		count=0
+		for word in pivot_words:
+			if word in x_list[3]:			
+				count+= 1
+		return count
 		
 class Length(FeatureParser):
 	
 	def vectorize(self,x_list):
-		if len(x_list[3])>=150:
-			return 1
-		return 0
+		return len(x_list[3])
 		
 class Indef_articles(FeatureParser):
 	def vectorize(self, x_list): 
 		indef = ['a', 'an']
 		count=0
-		if any((c in indef) for c in x_list[3]):
-			count+=1
-		if count>=6:
-			return 1
-		return 0
+		for c in x_list[3]:
+			if c in indef:
+				count+=1
+		return count
+
 
 class SentenceFrequency(FeatureParser):
 	
 	def vectorize(self, x_list): 
-		if lineDict[x_list[3]] > 2:
-			if(len(x_list[3].strip().split())>1):
-				print x_list[3]		
-				return 1
-		return 0
+		if(len(x_list[3].strip().split())==1):
+			return 0
+		return lineDict[x_list[3]]
 
 class UncommonWord(FeatureParser):
 
 	def vectorize(self, x_list):
 
+		cuss = ['fuck', 'bitch', 'motherfucker', 'fucking', 'motherfucking']
+		
 		line = re.sub('[?!.]', ' ', x_list[3]).split()
+		count=0
  		for w in line:
- 			if w in nouns:
+ 			if w in nouns or cuss:
  				if wordDict[w] == 1:
- 					return 1
-		return 0
+ 					count+= 1
+		return count
 
 class TimeGap(FeatureParser):
 
@@ -104,7 +106,8 @@ class TimeGap(FeatureParser):
 		global prevTime
 		if(prevTime == ""):
 			prevTime = x_list[2]
-			return 1 #opening line
+			prevTimeObject = getTime(prevTime)
+			return (prevTimeObject.minute*60) + prevTimeObject.second #opening line
 		
 		prevTimeObject = getTime(prevTime)
 		currentTimeObject = getTime(x_list[2])
@@ -112,18 +115,18 @@ class TimeGap(FeatureParser):
 
 		if(prevTimeObject.minute == currentTimeObject.minute):
 			gap = (currentTimeObject.second + float(currentTimeObject.microsecond)/1000000 ) - (prevTimeObject.second + float(prevTimeObject.microsecond)/1000000) 
-			if gap > 3 and gap<6 :
-				return 1
+			return gap
 		if(currentTimeObject.minute - prevTimeObject.minute == 1 ):
 			gap = (currentTimeObject.second + float(currentTimeObject.microsecond)/1000000 + 60) - (prevTimeObject.second + float(prevTimeObject.microsecond)/1000000) 
-			if gap > 3 and gap<6 :
-				return 1
-		return 0
+			return gap
+		return (currentTimeObject.minute - prevTimeObject.minute)*60
+
 
 classifier = [EorQ,Pivot_words,Length,Indef_articles,SentenceFrequency,UncommonWord,TimeGap]
 
 featureWriter = csv.writer(featureFile, delimiter=',',
                             quoting=csv.QUOTE_MINIMAL)		
+
 
 for row in _features:
 	feature = []
@@ -132,3 +135,4 @@ for row in _features:
 	featureWriter.writerow(feature + row[-1:])
 subFile.close()
 featureFile.close()
+

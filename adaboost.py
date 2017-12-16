@@ -12,6 +12,12 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import pairwise
 from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import roc_auc_score
+
+from imblearn.over_sampling import RandomOverSampler, SMOTE
+
 
 """ HELPER FUNCTION: GET ERROR RATE ========================================="""
 def get_error_rate(pred, Y):
@@ -32,6 +38,11 @@ def generic_clf(Y_train, X_train, Y_test, X_test, clf):
     clf.fit(X_train,Y_train)
     pred_train = clf.predict(X_train)
     pred_test = clf.predict(X_test)
+
+    print confusion_matrix(Y_train, pred_train)
+
+    print confusion_matrix(Y_test, pred_test)
+
     return get_error_rate(pred_train, Y_train), \
            get_error_rate(pred_test, Y_test)
 
@@ -52,6 +63,101 @@ def calculateScore(copy, pred, Y) :
         sums[j] = sums[j]/correct
 
     print sums
+    
+
+def adaC2_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, C=[1,2]):
+    n_train, n_test = len(X_train), len(X_test)
+    # Initialize weights
+    w = np.ones(n_train) / n_train
+    pred_train, pred_test = [np.zeros(n_train), np.zeros(n_test)]
+    
+    #Create Model
+    for i in range(M):
+        # Train base classifier with W
+        clf.fit(X_train, Y_train, sample_weight = w)
+        pred_train_i = clf.predict(X_train)
+        pred_test_i = clf.predict(X_test)
+
+        #h(x) expressed in terms of {1,-1}
+        pred_train_i1 = [1 if x=='1' else -1 for x in pred_train_i]
+        pred_test_i1 = [1 if x=='1' else -1 for x in pred_test_i]
+
+        # Indicator function
+        #miss_0 = [int(x) for x in (Y_train==  pred_train_i != Y_train)]
+        #miss = [int(x) for x in (pred_train_i != Y_train)]
+
+        miss = []
+        for i in range(len(pred_train_i)):
+            if(pred_train_i[i]!= Y_train[i]): 
+                if(Y_train[i]=='1'):
+                    miss.append(C[1])
+                else:
+                    miss.append(1)
+            else:
+                miss.append(0)
+
+
+        #h(x)y in terms of {1,-1}
+        miss2 = [x if x!=0 else -1 for x in miss]
+        
+        # Error
+        err_m = np.dot(w,miss) / sum(w)
+        #err_m = float(sum(miss)) / n_train
+
+        err_thr = (1.0-rho)/2.0
+#        print err_m
+
+        if(err_m > err_thr) :
+            continue
+
+        #print err_m
+        # Alpha
+        alpha_m = 0.5 * np.log(((1.0-rho) *(1.0 - err_m) )/ ((1.0+rho)*err_m))
+
+        #print alpha_m
+        #Normalization Factor 
+        Z_t = 2*( math.sqrt((err_m*(1-err_m)) / (1-rho**2) ) )
+        
+        #w, np.exp([float(x) * alpha_m for x in miss])
+
+        # Update Distribution        
+        w = np.divide(np.multiply(w, np.exp([float(x) * alpha_m for x in miss2])), Z_t)
+
+        #print sum(w)
+        # Add to prediction
+        pred_train = [sum(x) for x in zip(pred_train, 
+                                          [float(x) * alpha_m for x in pred_train_i1])]
+        pred_test = [sum(x) for x in zip(pred_test, 
+                                         [float(x) * alpha_m for x in pred_test_i1])]
+    
+
+    pred_test_copy = pred_test
+
+    pred_train, pred_test = np.sign(pred_train), np.sign(pred_test)
+    
+    pred_train = [x if x==1 else 0 for x in pred_train]
+    pred_test = [x if x==1 else 0 for x in pred_test]
+
+
+    #calculateScore(pred_test_copy,pred_test, Y_test)
+
+    print "confusion_matrix for T:"
+    print M
+
+    Y_train = [int(x) if int(x)==1 else 0 for x in Y_train]
+    Y_test = [int(x) if int(x)==1 else 0 for x in Y_test]
+
+ #   print confusion_matrix(Y_train, pred_train)
+    print confusion_matrix(Y_test, pred_test)
+    print "Balanced Accuracy :"
+    print roc_auc_score(Y_test, pred_test)
+    print "Accuracy :"
+    print accuracy_score(Y_test, pred_test)
+    # Return error rate in train and test set
+    return get_error_rate(pred_train, Y_train), \
+           get_error_rate(pred_test, Y_test)
+
+
     
 def adaboost_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, theta=0.1):
     n_train, n_test = len(X_train), len(X_test)
@@ -82,7 +188,7 @@ def adaboost_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, theta=0.1):
         #err_m = float(sum(miss)) / n_train
 
         err_thr = (1.0-rho)/2.0
-        print err_m
+        #print err_m
 
         if(err_m > err_thr) :
             continue
@@ -113,13 +219,20 @@ def adaboost_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, theta=0.1):
 
     pred_train, pred_test = np.sign(pred_train), np.sign(pred_test)
     
-    pred_train = [x if x==1 else 0 for x in pred_train]
-    pred_test = [x if x==1 else 0 for x in pred_test]
+    pred_train = [int(x) if int(x)==1 else 0 for x in pred_train]
+    pred_test = [int(x) if int(x)==1 else 0 for x in pred_test]
 
 
     #calculateScore(pred_test_copy,pred_test, Y_test)
 
+    print "confusion_matrix for T:"
+    print M
 
+    Y_train = [int(x) if int(x)==1 else 0 for x in Y_train]
+    Y_test = [int(x) if int(x)==1 else 0 for x in Y_test]
+
+    #print confusion_matrix(Y_train, pred_train)
+    print confusion_matrix(Y_test, pred_test)
     # Return error rate in train and test set
     return get_error_rate(pred_train, Y_train), \
            get_error_rate(pred_test, Y_test)
@@ -143,12 +256,15 @@ def plot_error_rate(er_train, er_test):
 if __name__ == '__main__':
     
 
-    reader = csv.reader(open("featureSet.csv", "rb"), delimiter=",")
+    reader = csv.reader(open("new-scripts/DarkfeatureSetCont.csv", "rb"), delimiter=",")
+    test_reader= csv.reader(open("new-scripts/featureSetTest.csv","rb"), delimiter=",")
+
     data = list(reader)
+    test_data = list(test_reader)
 
     m = 1000
 
-    T = {100, 200}
+    T = {1,2,5,100,200,500,1000}
     #T = {500}
 
     #rho = {0,0.00390625}
@@ -161,8 +277,9 @@ if __name__ == '__main__':
     t_cross_error = []
     t_fit_error  = []
 
-    training = data[:m]
-    testing = data[m:]
+
+    training = data
+    testing = test_data
 
     D = [[]] * m
 
@@ -182,22 +299,33 @@ if __name__ == '__main__':
     X_train = scaler.transform(X_train)
     X_test = scaler.transform(X_test)   
 
-    
+
+    sm=SMOTE(random_state=1)
+    #X_res,Y_res =ros.fit_sample(X_train,Y_train)
+    X_res,Y_res =sm.fit_sample(X_train,Y_train)
+
     # Fit a simple decision tree first
-    clf_tree = DecisionTreeClassifier(max_depth = 1, random_state = 1)
-    er_tree = generic_clf(Y_train, X_train, Y_test, X_test, clf_tree)
+    er_test=[]
+    i_list=[]
+    tp_list=[]
+
+    #for i in range(1,20):
+    # Fit a simple decision tree first
+    clf_tree = DecisionTreeClassifier(max_depth = 4, random_state = 1)
+    er_tree = generic_clf(Y_res, X_res, Y_test, X_test, clf_tree)
     
     # Fit Adaboost classifier using a decision tree as base estimator
     # Test with different number of iterations
-#    er_train, er_test = [er_tree[0]], [er_tree[1]]
+    er_train, er_test = [er_tree[0]], [er_tree[1]]
 
+    
     for j in rho: 
-        er_train, er_test = [], []
+        #er_train, er_test = [], []
         for i in T:   
-            er_i = adaboost_clf(Y_train, X_train, Y_test, X_test, i, clf_tree,j)
+            er_i = adaC2_clf(Y_res, X_res, Y_test, X_test, i, clf_tree,j)
             er_train.append(er_i[0])
             er_test.append(er_i[1])
         print "----"
         print " rho no : "+str(j)
-        print er_train
+        #print er_train
         print er_test
