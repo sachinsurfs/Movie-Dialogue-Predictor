@@ -92,7 +92,7 @@ def adaC2_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, C=[1,2]):
                 if(Y_train[i]=='1'):
                     miss.append(C[1])
                 else:
-                    miss.append(1)
+                    miss.append(C[0])
             else:
                 miss.append(0)
 
@@ -255,16 +255,25 @@ def plot_error_rate(er_train, er_test):
 """ MAIN SCRIPT ============================================================="""
 if __name__ == '__main__':
     
+    train_movie = "42"
+    train_movie_2 = "Dark-Knight"
+    train_movie_3 = "Ant-Man"
 
-    reader = csv.reader(open("new-scripts/DarkfeatureSetCont.csv", "rb"), delimiter=",")
-    test_reader= csv.reader(open("new-scripts/featureSetTest.csv","rb"), delimiter=",")
+    test_movie = "Avengers-Ultron"
+
+
+    reader = csv.reader(open("datasets/featureSets/"+train_movie+"_featureSet.csv", "rb"), delimiter=",")
+    reader2 = csv.reader(open("datasets/featureSets/"+train_movie_2+"_featureSet.csv", "rb"), delimiter=",")
+
+    test_reader= csv.reader(open("datasets/featureSets/"+test_movie+"_featureSet.csv","rb"), delimiter=",")
 
     data = list(reader)
+    data.extend(list(reader2))
     test_data = list(test_reader)
 
     m = 1000
 
-    T = {1,2,5,100,200,500,1000}
+    T = {1,2,5,100,200,500}
     #T = {500}
 
     #rho = {0,0.00390625}

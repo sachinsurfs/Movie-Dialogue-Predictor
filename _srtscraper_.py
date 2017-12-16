@@ -1,10 +1,18 @@
 import csv
+import sys
 
-file=open("Die.Hard.1988.720p.x264.srt","r+")
+
+if len(sys.argv)==1:
+	movie_name = "Ant-Man"
+else:
+	movie_name = sys.argv[1]
+
+file_name = "datasets/srt/"+movie_name+"-subs.srt"
+file=open(file_name,"r+")
 
 #TODO :Consume srt last line
 
-csvfile= open("subtitles.csv","wb")
+csvfile= open("datasets/subtitles/"+movie_name+"_subtitles.csv","wb")
 csvout= csv.writer(csvfile)
 
 arr=[]

@@ -1,10 +1,16 @@
 import csv
 import re
+import sys
 
 y = []
 
-subFile = open('subtitles.csv', 'rb')
-dFile = open('dialogues.csv', 'rb')
+if len(sys.argv)==1:
+	movie_name = "Ant-Man"
+else:
+	movie_name = sys.argv[1]
+
+subFile = open('datasets/subtitles/'+movie_name+'_subtitles.csv', 'rb')
+dFile = open('datasets/dialogues/'+movie_name+'-Dialogues.csv', 'rb')
 subtitles = csv.reader(subFile, delimiter=',',quotechar='"') #Assuming this isn't very long
 dialogues = csv.reader(dFile, delimiter=',' ,quotechar='"')
 
@@ -179,7 +185,7 @@ for row in dialogues:
 	setSubtitleIndex(row[0],subtitles)
 
 
-with open('__featureSet.csv', 'wb') as _featureFile:
+with open('datasets/_featureSets/_'+movie_name+'_featureSet.csv', 'wb') as _featureFile:
  
 	spamwriter = csv.writer(_featureFile, delimiter=',',
 	                            quoting=csv.QUOTE_MINIMAL)		

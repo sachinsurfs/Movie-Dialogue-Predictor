@@ -4,9 +4,15 @@ import re
 from collections import Counter
 from nltk.corpus import wordnet as wn
 from datetime import time
+import sys
 
-subFile = open('__featureSet.csv', 'rb')
-featureFile = open('featureSetCont.csv', 'wb')
+if len(sys.argv)==1:
+	movie_name = "Ant-Man"
+else:
+	movie_name = sys.argv[1]
+
+subFile = open('datasets/_featureSets/_'+movie_name+'_featureSet.csv', 'rb')
+featureFile = open('datasets/featureSets/'+movie_name+'_featureSet.csv', 'wb')
 
 _features = csv.reader(subFile, delimiter=',',quotechar='"') #Assuming this isn't very long
 
