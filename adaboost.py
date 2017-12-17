@@ -15,8 +15,19 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc
+from sklearn import tree
 
 from imblearn.over_sampling import RandomOverSampler, SMOTE
+
+plt.figure()
+acc = []
+
+tp = []
+fn = []
+
+base_acc = []
 
 
 """ HELPER FUNCTION: GET ERROR RATE ========================================="""
@@ -43,6 +54,28 @@ def generic_clf(Y_train, X_train, Y_test, X_test, clf):
 
     print confusion_matrix(Y_test, pred_test)
 
+    Y_test = [int(x) if int(x)==1 else 0 for x in Y_test]
+    pred_test = [x if x==1 else 0 for x in pred_test]
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    '''
+    for i in range(2):
+        fpr[i], tpr[i], _ = roc_curve(Y_test[:, i], pred_test[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    '''
+
+    fpr, tpr, _ = roc_curve(Y_test, pred_test)
+    roc_auc = auc(fpr, tpr)    
+
+    lw = 2
+
+  #  plt.plot(fpr, tpr, color='darkgreen',
+   #          lw=lw, label='ROC curve - DecisionTree_Depth-3_SMOTE (area = %0.2f)' % roc_auc)    
+
+
+
     return get_error_rate(pred_train, Y_train), \
            get_error_rate(pred_test, Y_test)
 
@@ -65,7 +98,7 @@ def calculateScore(copy, pred, Y) :
     print sums
     
 
-def adaC2_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, C=[1,2]):
+def adaC2_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, C=[1,1.5]):
     n_train, n_test = len(X_train), len(X_test)
     # Initialize weights
     w = np.ones(n_train) / n_train
@@ -133,6 +166,7 @@ def adaC2_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, C=[1,2]):
 
     pred_test_copy = pred_test
 
+    confidence = pred_test
     pred_train, pred_test = np.sign(pred_train), np.sign(pred_test)
     
     pred_train = [x if x==1 else 0 for x in pred_train]
@@ -148,16 +182,46 @@ def adaC2_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, C=[1,2]):
     Y_test = [int(x) if int(x)==1 else 0 for x in Y_test]
 
  #   print confusion_matrix(Y_train, pred_train)
-    print confusion_matrix(Y_test, pred_test)
+    cm = confusion_matrix(Y_test, pred_test)
+    print cm
+    tp.append(cm[1][1]) 
+    fn.append(cm[1][0]) 
+
     print "Balanced Accuracy :"
-    print roc_auc_score(Y_test, pred_test)
+    ras = roc_auc_score(Y_test, pred_test)
+    print ras
+    base_acc.append(ras)
+    acc.append(ras*100)
+
     print "Accuracy :"
     print accuracy_score(Y_test, pred_test)
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    '''
+    for i in range(2):
+        fpr[i], tpr[i], _ = roc_curve(Y_test[:, i], pred_test[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    '''
+
+    fpr, tpr, _ = roc_curve(Y_test, confidence)
+    roc_auc = auc(fpr, tpr)    
+
+    lw = 2
+
+    if(M<10):
+        plt.plot(fpr, tpr, color='darkorange',
+             lw=lw, label='ROC curve - AdaBoost_C1_SMOTE_T-'+str(M)+' (area = %0.2f)' % roc_auc)
+
+    else:
+        plt.plot(fpr, tpr, color='green',
+                 lw=lw, label='ROC curve - AdaBoost_C1_SMOTE_T-'+str(M)+' (area = %0.2f)' % roc_auc)
+
+
     # Return error rate in train and test set
     return get_error_rate(pred_train, Y_train), \
            get_error_rate(pred_test, Y_test)
-
-
     
 def adaboost_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, theta=0.1):
     n_train, n_test = len(X_train), len(X_test)
@@ -217,8 +281,10 @@ def adaboost_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, theta=0.1):
 
     pred_test_copy = pred_test
 
+    confidence = np.absolute(pred_test)
     pred_train, pred_test = np.sign(pred_train), np.sign(pred_test)
     
+
     pred_train = [int(x) if int(x)==1 else 0 for x in pred_train]
     pred_test = [int(x) if int(x)==1 else 0 for x in pred_test]
 
@@ -233,6 +299,27 @@ def adaboost_clf(Y_train, X_train, Y_test, X_test, M, clf, rho=0, theta=0.1):
 
     #print confusion_matrix(Y_train, pred_train)
     print confusion_matrix(Y_test, pred_test)
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    '''
+    for i in range(2):
+        fpr[i], tpr[i], _ = roc_curve(Y_test[:, i], pred_test[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    '''
+
+    fpr, tpr, _ = roc_curve(Y_test, confidence)
+    roc_auc = auc(fpr, tpr)    
+
+    lw = 1
+    if(M<10):
+        plt.plot(fpr, tpr, color='darkblue',
+                 lw=lw, label='ROC curve - AdaBoost_SMOTE_T-'+str(M)+' (area = %0.2f)' % roc_auc)
+    else:
+        plt.plot(fpr, tpr, color='darkred',
+                 lw=lw, label='ROC curve - AdaBoost_SMOTE_T-'+str(M)+' (area = %0.2f)' % roc_auc)        
+
     # Return error rate in train and test set
     return get_error_rate(pred_train, Y_train), \
            get_error_rate(pred_test, Y_test)
@@ -255,86 +342,132 @@ def plot_error_rate(er_train, er_test):
 """ MAIN SCRIPT ============================================================="""
 if __name__ == '__main__':
     
-    train_movie = "42"
+    train_movie = "Ant-Man"
     train_movie_2 = "Dark-Knight"
-    train_movie_3 = "Ant-Man"
-
-    test_movie = "Avengers-Ultron"
+    train_movie_3 = "42"
 
 
     reader = csv.reader(open("datasets/featureSets/"+train_movie+"_featureSet.csv", "rb"), delimiter=",")
     reader2 = csv.reader(open("datasets/featureSets/"+train_movie_2+"_featureSet.csv", "rb"), delimiter=",")
-
-    test_reader= csv.reader(open("datasets/featureSets/"+test_movie+"_featureSet.csv","rb"), delimiter=",")
+    reader3 = csv.reader(open("datasets/featureSets/"+train_movie_3+"_featureSet.csv", "rb"), delimiter=",")
 
     data = list(reader)
     data.extend(list(reader2))
-    test_data = list(test_reader)
+    data.extend(list(reader3))
 
-    m = 1000
+    #test_movie = "42"
+    test_movie_list = ["Godfather2","GoneGirl","HarryPotter", "Hobbit","LOTR1","MadMax","ManofSteel","PursuitofHappyness","Spiderman"]
+    for test_movie in test_movie_list:
 
-    T = {1,2,5,100,200,500}
-    #T = {500}
-
-    #rho = {0,0.00390625}
-    rho = {0}
-    #rho = { 0.0009765625,0.001953125,0.00390625,0.0078125, 0.015625,0.03125,0.0625, 0.125, 0.25, 0.5 }
-   
-    X_train = []
-    Y_train = []
-
-    t_cross_error = []
-    t_fit_error  = []
+        test_reader= csv.reader(open("datasets/featureSets/"+test_movie+"_featureSet.csv","rb"), delimiter=",")
 
 
-    training = data
-    testing = test_data
+        test_data = list(test_reader)
 
-    D = [[]] * m
+        m = 1000
 
-    for i in range(len(training)):
-        X_train.append(list(training[i][:-1]))
-        Y_train.append(training[i][-1])
+        T = {200}
+        #T = {500}
 
-    X_test = []
-    Y_test = []
+        #rho = {0,0.00390625}
+        rho = {0}
+        #rho = { 0.0009765625,0.001953125,0.00390625,0.0078125, 0.015625,0.03125,0.0625, 0.125, 0.25, 0.5 }
+       
+        X_train = []
+        Y_train = []
 
-    for i in range(len(testing)):
-        X_test.append(list(testing[i][:-1]))
-        Y_test.append(testing[i][-1])
-
-
-    scaler = StandardScaler().fit(X_train)
-    X_train = scaler.transform(X_train)
-    X_test = scaler.transform(X_test)   
+        t_cross_error = []
+        t_fit_error  = []
 
 
-    sm=SMOTE(random_state=1)
-    #X_res,Y_res =ros.fit_sample(X_train,Y_train)
-    X_res,Y_res =sm.fit_sample(X_train,Y_train)
+        training = data
+        testing = test_data
 
-    # Fit a simple decision tree first
-    er_test=[]
-    i_list=[]
-    tp_list=[]
+        D = [[]] * m
 
-    #for i in range(1,20):
-    # Fit a simple decision tree first
-    clf_tree = DecisionTreeClassifier(max_depth = 4, random_state = 1)
-    er_tree = generic_clf(Y_res, X_res, Y_test, X_test, clf_tree)
-    
-    # Fit Adaboost classifier using a decision tree as base estimator
-    # Test with different number of iterations
-    er_train, er_test = [er_tree[0]], [er_tree[1]]
+        for i in range(len(training)):
+            X_train.append(list(training[i][:-1]))
+            Y_train.append(training[i][-1])
 
-    
-    for j in rho: 
-        #er_train, er_test = [], []
-        for i in T:   
-            er_i = adaC2_clf(Y_res, X_res, Y_test, X_test, i, clf_tree,j)
-            er_train.append(er_i[0])
-            er_test.append(er_i[1])
-        print "----"
-        print " rho no : "+str(j)
-        #print er_train
-        print er_test
+        X_test = []
+        Y_test = []
+
+        for i in range(len(testing)):
+            X_test.append(list(testing[i][:-1]))
+            Y_test.append(testing[i][-1])
+
+
+        scaler = StandardScaler().fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_test = scaler.transform(X_test)   
+
+
+        sm=SMOTE(random_state=1)
+        #X_res,Y_res =ros.fit_sample(X_train,Y_train)
+        X_res,Y_res =sm.fit_sample(X_train,Y_train)
+
+        # Fit a simple decision tree first
+        er_test=[]
+        i_list=[]
+        tp_list=[]
+
+        #for i in range(1,20):
+        # Fit a simple decision tree first
+        clf_tree = DecisionTreeClassifier(criterion='gini',max_depth = 3, random_state = 1)
+        print test_movie
+        er_tree = generic_clf(Y_res, X_res, Y_test, X_test, clf_tree)
+
+
+        tree.export_graphviz(clf_tree,
+        out_file='stump_iteration_1.dot') 
+        #clf_tree = DecisionTreeClassifier(max_depth = 3, random_state = 1)
+
+        # Fit Adaboost classifier using a decision tree as base estimator
+        # Test with different number of iterations
+        er_train, er_test = [[],[]]#[er_tree[0]], [er_tree[1]]
+
+        
+        for j in rho: 
+            #er_train, er_test = [], []
+            for i in T:   
+                er_i = adaC2_clf(Y_res, X_res, Y_test, X_test, i, clf_tree,j)
+                er_train.append(er_i[0])
+                er_test.append(er_i[1])
+
+            print "----"
+            print " rho no : "+str(j)
+            #print er_train
+            print er_test
+        
+        '''
+        for C in np.linspace(1,4,num=16):
+            for j in rho: 
+                #er_train, er_test = [], []
+                for i in T:   
+                    er_i = adaC2_clf(Y_res, X_res, Y_test, X_test, i, clf_tree,j, [1,C])
+                    er_train.append(er_i[0])
+                    er_test.append(er_i[1])
+                print "----"
+                print " rho no : "+str(j)
+                #print er_train
+                print er_test
+        '''
+        #print acc
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver operating characteristic')
+        plt.legend(loc="lower right")    
+        #plt.show()
+
+    print "TP :" +str(tp)
+    print "FN :" + str(fn)
+    print "Balanced Accuracy" + str(base_acc) 
+ 
+
+
+'''
+
+'''    
