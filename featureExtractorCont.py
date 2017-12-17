@@ -127,8 +127,11 @@ class TimeGap(FeatureParser):
 			return gap
 		return (currentTimeObject.minute - prevTimeObject.minute)*60
 
+class TrailingCommas(FeatureParser) :
+	def vectorize(self, x_list):
+		return x_list[3].count(",")
 
-classifier = [EorQ,Pivot_words,Length,Indef_articles,SentenceFrequency,UncommonWord,TimeGap]
+classifier = [EorQ,Pivot_words,Length,Indef_articles,SentenceFrequency,UncommonWord,TimeGap,TrailingCommas]
 
 featureWriter = csv.writer(featureFile, delimiter=',',
                             quoting=csv.QUOTE_MINIMAL)		

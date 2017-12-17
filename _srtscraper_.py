@@ -22,6 +22,8 @@ line = "-"
 while line:
 	index = file.readline().strip()
 
+	if(index==''):
+		break
 	time_start,time_end = file.readline().strip().split(" --> ")
 
 	dialogue = file.readline().strip().split("- ")[::-1][0]
