@@ -1,6 +1,7 @@
 import csv
 import re
 import sys
+import codecs
 
 y = []
 
@@ -9,10 +10,12 @@ if len(sys.argv)==1:
 else:
 	movie_name = sys.argv[1]
 
-subFile = open('datasets/subtitles/'+movie_name+'_subtitles.csv', 'rb')
-dFile = open('datasets/dialogues/'+movie_name+'-Dialogues.csv', 'rb')
+subFile = codecs.open('datasets/subtitles/'+movie_name+'_subtitles.csv', 'rb')
+dFile = codecs.open('datasets/dialogues/'+movie_name+'-Dialogues.csv', 'rb')
 subtitles = csv.reader(subFile, delimiter=',',quotechar='"') #Assuming this isn't very long
-dialogues = csv.reader(dFile, delimiter=',' ,quotechar='"')
+dialogues = csv.reader([x.replace('\0', '') for x in dFile], delimiter=',' ,quotechar='"')
+
+
 
 
 y = [0] * sum(1 for row in subtitles)
@@ -182,6 +185,8 @@ def setSubtitleIndex(dialogue,subtitles):
 	return
 
 for row in dialogues:
+	if len(row)==0:
+		continue
 	setSubtitleIndex(row[0],subtitles)
 
 
