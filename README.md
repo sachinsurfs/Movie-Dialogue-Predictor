@@ -7,3 +7,5 @@ Steps to run:
 ./runit.sh
 python adaboost.py 
 ~~~
+
+You can read more about the project [here](https://drive.google.com/file/d/1MZo91vPyLIDG5iYtwG2YzK2vcL-N3QZT/view?usp=sharing).
